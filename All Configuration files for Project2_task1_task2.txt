@@ -1,0 +1,123 @@
+##Customdocker file for Task2##
+FROM ubuntu
+
+#Install NGINX
+RUN \
+ apt-get update && \
+ apt-get install -y nginx && \
+ apt-get install -y net-tools && \
+ rm -rf /var/lib/apt/lists/* && \
+ echo "\ndaemon off;" >> /etc/nginx/nginx.conf && \
+ chown -R www-data:www-data /var/lib/nginx
+
+ENV containerip=0.0.0.0
+RUN rm /etc/nginx/sites-enabled/default
+COPY index.html /var/www/html
+COPY default /etc/nginx/sites-enabled/default
+
+# Define mountable directories
+VOLUME ["/etc/nginx/sites-enabled", "/etc/nginx/certs", "/etc/nginx/conf.d", "/var/log/nginx", "/var/www/html"]
+
+# Define the working directory.
+WORKDIR /etc/nginx
+
+# Capture ip address & add to index.html
+CMD sed -i "s/Hello, Learners!!! Welcome to Session 1.1/$(hostname -I)/g" /var/www/html/index.html ; nginx
+
+# Open port
+EXPOSE 80
+EXPOSE 443
+
+
+
+
+##Default file copied at /etc/nginx/sites-enabled in containers while docker compose##
+server {
+        listen 80;
+        listen [::]:80;
+
+
+        root /var/www/html;
+
+        index index.html index.htm index.nginx-debian.html;
+
+        server_name containeripp.com;
+
+        location / {
+                try_files $uri $uri/ =404;
+        }
+
+}
+
+
+
+##default1 file for reverse proxy container##
+ipupstream service1 {
+     server 52.91.214.102;
+     server 172.25.0.3;
+     server 172.25.0.4;
+     server 172.25.0.5;
+     server 172.25.0.6;
+ }
+
+ server {
+        listen 80;
+        listen [::]:80;
+
+        root /var/www/html;
+
+        index index.html index.htm index.nginx-debian.html;
+
+        server_name containerip.com;
+        location / {
+            proxy_pass http:ervice1:80;
+        }
+    }
+
+
+
+##Docker file for Task1##
+FROM ubuntu
+
+#Install NGINX
+RUN \
+ apt-get update && \
+ apt-get install -y nginx && \
+# apt-get install -y net-tools && \
+ rm -rf /var/lib/apt/lists/* && \
+ echo "\ndaemon off;" >> /etc/nginx/nginx.conf && \
+ chown -R www-data:www-data /var/lib/nginx
+
+# Define mountable directories
+VOLUME ["/etc/nginx/sites-enabled", "/etc/nginx/certs", "/etc/nginx/conf.d", "/var/log/nginx", "/var/www/html"]
+
+# Define the working directory.
+WORKDIR /etc/nginx
+
+# Capture ip address & add to index.html
+CMD ["nginx"]
+
+# Open port
+EXPOSE 80
+EXPOSE 443
+
+
+
+
+## docker-compose.yml
+version: "3"
+
+services:
+  service1:
+   image: nginx-ip
+   restart: always
+   deploy:
+    replicas: 4
+   ports:
+    - 80
+
+  service2:
+   image: nginx:latest
+   ports:
+    - "80:80"   
+
